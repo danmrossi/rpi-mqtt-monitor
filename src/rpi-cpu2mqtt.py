@@ -858,10 +858,10 @@ def parse_arguments():
 
     if args.version:
         installed_version = config.version
-        latest_versino = update.check_git_version_remote(script_dir).strip()
+        latest_version = update.check_git_version_remote(script_dir).strip()
         print("Installed version: " + installed_version)
-        print("Latest version: " + latest_versino)
-        if installed_version != latest_versino:
+        print("Latest version: " + latest_version)
+        if installed_version != latest_version:
             print("Update available")
         else:
             print("No update available")
