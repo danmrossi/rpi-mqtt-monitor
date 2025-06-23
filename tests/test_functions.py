@@ -23,6 +23,7 @@ sys.modules['paho'] = paho_module
 sys.modules['paho.mqtt'] = paho_mqtt_module
 sys.modules['paho.mqtt.client'] = paho_client_module
 sys.modules['psutil'] = types.ModuleType("psutil")
+sys.modules['requests'] = types.ModuleType("requests")
 
 spec = importlib.util.spec_from_file_location("monitor", str(SRC_DIR / "rpi-cpu2mqtt.py"))
 monitor = importlib.util.module_from_spec(spec)
