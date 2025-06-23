@@ -8,7 +8,8 @@ This reads the temp value of a DS18B20 sensor
 
 def sensor_DS18B20(sensor_id, verbose=False):
     """
-    :param sensor_id: Name of the sensor id, can be found in /sys/bus/w1/devices
+    :param sensor_id: Name of the sensor id, can be found in
+        /sys/bus/w1/devices
     :type sensor_id: string
     """
     # read the file
@@ -19,7 +20,7 @@ def sensor_DS18B20(sensor_id, verbose=False):
         # read temperature value and convert it
         stringvalue = filecontent.split("\n")[1].split(" ")[9]
         temperature = float(stringvalue[2:]) / 1000
-    except IOError as e:
+    except IOError:
         # if an error occurs, we return -300
         temperature = float(-300)
 
@@ -28,7 +29,7 @@ def sensor_DS18B20(sensor_id, verbose=False):
     temp = round(temperature, 1)
     # if we set the verbose, we print the current temperature
     if verbose:
-        print ("1-wire %s: temp=%.1f" % (sensor_id, temp))
+        print("1-wire %s: temp=%.1f" % (sensor_id, temp))
     return temp
 
 
@@ -50,12 +51,10 @@ if __name__ == "__main__":
         while True:
             for sensor_id in sensors_ids:
                 sensor_DS18B20(sensor_id=sensor_id, verbose=True)
-                #sensor_DS18B20("0014531448ff")
+                # sensor_DS18B20("0014531448ff")
             time.sleep(2)
     except IOError as e:
         errno, strerror = e.args
-        print("I/O error({0}): {1}".format(errno,strerror))
+        print("I/O error({0}): {1}".format(errno, strerror))
     except KeyboardInterrupt:
-        print ("keyboard interrupt")
-
-
+        print("keyboard interrupt")

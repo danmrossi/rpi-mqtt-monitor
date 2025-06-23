@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
 """
-from https://raw.githubusercontent.com/kif/sht21_python/refs/heads/python3/sht21.py
+from https://raw.githubusercontent.com/kif/sht21_python/refs/heads/python3/
+sht21.py
 from https://github.com/kif/sht21_python/tree/python3
-forked from jaques/sht21_python
-with 
+forked from jaques/sht21_python with
 
 The MIT License (MIT)
 
@@ -13,19 +13,20 @@ Copyright (c) 2013 Richard Jaques
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
 the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+    use, copy, modify, merge, publish, distribute, sublicense, and/or
+    sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 """
 
@@ -36,10 +37,14 @@ import unittest
 
 
 class SHT21:
-    """Class to read temperature and humidity from SHT21, much of class was 
-    derived from:
-    http://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/Humidity/Sensirion_Humidity_SHT21_Datasheet_V3.pdf
-    and Martin Steppuhn's code from http://www.emsystech.de/raspi-sht21"""
+    """Class to read temperature and humidity from SHT21.
+
+    Much of this class was derived from the datasheet:
+    http://www.sensirion.com/fileadmin/user_upload/customers/sensirion/
+    Dokumente/Humidity/Sensirion_Humidity_SHT21_Datasheet_V3.pdf
+    and from Martin Steppuhn's code at:
+    http://www.emsystech.de/raspi-sht21
+    """
 
     # control constants
     _SOFTRESET = 0xFE
@@ -68,7 +73,7 @@ class SHT21:
         self.i2c.write(bytes([self._SOFTRESET]))
         time.sleep(0.050)
 
-    def read_temperature(self):    
+    def read_temperature(self):
         """Reads the temperature from the sensor.  Not that this call blocks
         for ~86ms to allow the sensor to return the data"""
         self.i2c.write(bytes([self._TRIGGER_TEMPERATURE_NO_HOLD]))
@@ -77,8 +82,8 @@ class SHT21:
         if self._calculate_checksum(data, 2) == data[2]:
             return self._get_temperature_from_buffer(data)
 
-    def read_humidity(self):    
-        """Reads the humidity from the sensor.  Not that this call blocks 
+    def read_humidity(self):
+        """Reads the humidity from the sensor.  Not that this call blocks
         for ~30ms to allow the sensor to return the data"""
         self.i2c.write(bytes([self._TRIGGER_HUMIDITY_NO_HOLD]))
         time.sleep(self._HUMIDITY_WAIT_TIME)
@@ -144,7 +149,7 @@ class SHT21:
 
 
 class SHT21Test(unittest.TestCase):
-    """simple sanity test.  Run from the command line with 
+    """simple sanity test.  Run from the command line with
     python -m unittest sht21 to check they are still good"""
 
     def test_temperature(self):
@@ -159,9 +164,14 @@ class SHT21Test(unittest.TestCase):
         self.failUnless(abs(calc_temp - 42.4924) < 0.001)
 
     def test_checksum(self):
-        """Unit test to check the checksum method.  Uses values read"""
-        self.failUnless(SHT21._calculate_checksum([chr(99), chr(172)], 2) == 249)
-        self.failUnless(SHT21._calculate_checksum([chr(99), chr(160)], 2) == 132)
+        """Unit test to check the checksum method."""
+        self.failUnless(
+            SHT21._calculate_checksum([chr(99), chr(172)], 2) == 249
+        )
+        self.failUnless(
+            SHT21._calculate_checksum([chr(99), chr(160)], 2) == 132
+        )
+
 
 if __name__ == "__main__":
     try:
@@ -171,4 +181,3 @@ if __name__ == "__main__":
     except IOError as e:
         print(type(e), e)
         print("Error creating connection to i2c.  This must be run as root")
-
