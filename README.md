@@ -14,7 +14,7 @@
 The easiest way to track your Raspberry Pi or Ubuntu computer system health and performance in Home Assistant.
 
 * Start Monitoring your System in just a few minutes
-* Monitor: CPU Load, CPU Temperature, Free Space, Used Memory, Swap Usage, Uptime, WFi Signal Quality, Network IO, Voltage, RPi Power Health, RPi5 Fan Speed, APT Updates available on HOST, External Sensors, HDD/SSD Temperature and System Clock Speed
+* Monitor: CPU Load, CPU Temperature, Free Space, Used Memory, Swap Usage, Uptime, WiFi Signal Quality, Network IO, Voltage, RPi Power Health, RPi5 Fan Speed, APT Updates available on HOST, External Sensors, HDD/SSD Temperature and System Clock Speed
 * Remotely Restart / Shutdown your system and control your monitors
 * Automatic HASS Configuration: Supports discovery messages, so no manual configuration in [Home Assistant](https://www.home-assistant.io/) configuration.yaml is needed
 * Automated Installation and Configuration: You can install it and schedule it with a service or cron job with just one command from shell
