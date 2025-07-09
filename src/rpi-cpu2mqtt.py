@@ -313,8 +313,8 @@ def check_git_update(script_dir):
 
 def check_git_version(script_dir):
     try:
-        rev = subprocess.run(['/usr/bin/git', '-C', script_dir, 'rev-list', '--tags', '--max-count=1'], stdout=subprocess.PIPE, text=True, check=True).stdout.strip()
-        result = subprocess.run(['/usr/bin/git', '-C', script_dir, 'describe', '--tags', rev], stdout=subprocess.PIPE, text=True, check=True)
+        rev = subprocess.run(['git', '-C', script_dir, 'rev-list', '--tags', '--max-count=1'], stdout=subprocess.PIPE, text=True, check=True).stdout.strip()
+        result = subprocess.run(['git', '-C', script_dir, 'describe', '--tags', rev], stdout=subprocess.PIPE, text=True, check=True)
         git_version = result.stdout.strip()
     except subprocess.CalledProcessError as e:
         logger.error('Error getting git version: %s', e)
@@ -643,21 +643,28 @@ def create_mqtt_client():
     client.reconnect_delay_set(min_delay=1, max_delay=120)
 
     try:
-        # blocking connect; loop_forever handles retries
-        client.connect(config.mqtt_host, int(config.mqtt_port), keepalive=60)
+        # Use async connect so the client will retry in the background
+        client.connect_async(config.mqtt_host, int(config.mqtt_port), keepalive=60)
     except Exception as e:
-        logger.error("Error connecting to MQTT broker: %s", e)
-        return None
+        # Even if the initial connection fails, return the client so it can
+        # keep retrying in the background when loop_start() is called.
+        logger.error("Error initiating MQTT connection: %s", e)
 
     return client
 
-def publish_update_status_to_mqtt(git_update, apt_updates):
-    client = create_mqtt_client()
+def publish_update_status_to_mqtt(git_update, apt_updates, client=None):
+    own_client = False
     if client is None:
-        logger.error("Error: Unable to connect to MQTT broker")
-        return
+        client = create_mqtt_client()
+        client.loop_start()
+        own_client = True
 
-    client.loop_start()
+    if not client.is_connected():
+        logger.warning("MQTT client not connected, skipping publish_update_status")
+        if own_client:
+            client.loop_stop()
+            client.disconnect()
+        return
     publish_infos = []
     if config.git_update:
         if config.discovery_messages:
@@ -688,10 +695,15 @@ def publish_update_status_to_mqtt(git_update, apt_updates):
 
 
     for info in publish_infos:
-        info.wait_for_publish()
+        try:
+            info.wait_for_publish()
+        except RuntimeError as e:
+            logger.error("Publish failed: %s", e)
+            break
 
-    client.loop_stop()
-    client.disconnect()
+    if own_client:
+        client.loop_stop()
+        client.disconnect()
 
 
 def publish_to_hass_api(monitored_values):
@@ -735,12 +747,19 @@ def send_sensor_data_to_home_assistant(entity_id, state, attributes):
         logger.error("Error sending %s to Home Assistant: %s", entity_id, exc)
 
 
-def publish_to_mqtt(monitored_values):
-    client = create_mqtt_client()
+def publish_to_mqtt(monitored_values, client=None):
+    own_client = False
     if client is None:
-        return
+        client = create_mqtt_client()
+        client.loop_start()
+        own_client = True
 
-    client.loop_start()
+    if not client.is_connected():
+        logger.warning("MQTT client not connected, skipping publish")
+        if own_client:
+            client.loop_stop()
+            client.disconnect()
+        return
     publish_infos = []
     non_standard_values = ['restart_button', 'shutdown_button', 'display_control', 'drive_temps', 'ext_sensors']
   # Publish standard monitored values
@@ -885,13 +904,18 @@ def publish_to_mqtt(monitored_values):
                 monitored_values["data_received"], qos=config.qos, retain=config.retain))
     
     for info in publish_infos:
-        info.wait_for_publish()
+        try:
+            info.wait_for_publish()
+        except RuntimeError as e:
+            logger.error("Publish failed: %s", e)
+            break
 
-    client.loop_stop()
-    client.disconnect()
+    if own_client:
+        client.loop_stop()
+        client.disconnect()
 
 
-def bulk_publish_to_mqtt(monitored_values):
+def bulk_publish_to_mqtt(monitored_values, client=None):
     values = [monitored_values.get(key, 0) for key in [
         'cpu_load', 'cpu_temp', 'used_space', 'voltage', 'sys_clock_speed', 'swap', 'memory', 'uptime', 'uptime_seconds',
         'wifi_signal', 'wifi_signal_dbm', 'rpi5_fan_speed', 'git_update', 'rpi_power_status', 'data_sent', 'data_received'
@@ -901,19 +925,30 @@ def bulk_publish_to_mqtt(monitored_values):
     values.extend(sensor[3] for sensor in ext_sensors)
     values_str = ', '.join(map(str, values))
 
-    client = create_mqtt_client()
+    own_client = False
     if client is None:
-        return
+        client = create_mqtt_client()
+        client.loop_start()
+        own_client = True
 
-    client.loop_start()
+    if not client.is_connected():
+        logger.warning("MQTT client not connected, skipping bulk_publish")
+        if own_client:
+            client.loop_stop()
+            client.disconnect()
+        return
     info = client.publish(
         config.mqtt_uns_structure + config.mqtt_topic_prefix + "/" + hostname,
         values_str, qos=config.qos, retain=config.retain)
 
-    info.wait_for_publish()
+    try:
+        info.wait_for_publish()
+    except RuntimeError as e:
+        logger.error("Publish failed: %s", e)
 
-    client.loop_stop()
-    client.disconnect()
+    if own_client:
+        client.loop_stop()
+        client.disconnect()
 
 
 def parse_arguments():
@@ -1024,7 +1059,7 @@ def get_network_data():
     return round(data_sent, 2), round(data_received, 2)
 
 
-def gather_and_send_info():
+def gather_and_send_info(mqtt_client=None):
     while not stop_event.is_set():       
         monitored_values = collect_monitored_values()
 
@@ -1059,9 +1094,9 @@ def gather_and_send_info():
         else:
             if config.mqtt_host != "ip address or host":
                 if hasattr(config, 'group_messages') and config.group_messages:
-                    bulk_publish_to_mqtt(monitored_values)
+                    bulk_publish_to_mqtt(monitored_values, mqtt_client)
                 else:
-                    publish_to_mqtt(monitored_values)
+                    publish_to_mqtt(monitored_values, mqtt_client)
             else:
                 pass
         if not args.service:
@@ -1073,11 +1108,11 @@ def gather_and_send_info():
             time.sleep(1)
 
 
-def update_status():
+def update_status(mqtt_client=None):
     while not stop_event.is_set():
         git_update = check_git_update(script_dir)
         apt_updates = get_apt_updates()
-        publish_update_status_to_mqtt(git_update, apt_updates)
+        publish_update_status_to_mqtt(git_update, apt_updates, mqtt_client)
         stop_event.wait(config.update_check_interval)
         if stop_event.is_set():
             break
@@ -1116,7 +1151,7 @@ def on_message(client, userdata, msg):
                 thread1.join()  # Wait for thread1 to finish
             if thread2 is not None:
                 thread2.join()  # Wait for thread2 to finish
-            sys.exit(0)  # Exit the script allowing cleanup handlers
+            sys.exit(0)  # Exit the script gracefully
 
         update_thread = threading.Thread(target=update_and_exit)
         update_thread.start()
@@ -1174,10 +1209,10 @@ if __name__ == '__main__':
             logger.info("Listening to topic: %s/update/%s/command", config.mqtt_discovery_prefix, hostname)
 
         # 3. Start your metric‐gathering threads
-        thread1 = threading.Thread(target=gather_and_send_info, daemon=True)
+        thread1 = threading.Thread(target=gather_and_send_info, args=(client,), daemon=True)
         thread1.start()
         if not args.hass_api and config.update:
-            thread2 = threading.Thread(target=update_status, daemon=True)
+            thread2 = threading.Thread(target=update_status, args=(client,), daemon=True)
             thread2.start()
 
         # 4. Start the network loop in the background (handles reconnects automatically)

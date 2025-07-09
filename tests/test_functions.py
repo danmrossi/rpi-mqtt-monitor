@@ -9,9 +9,12 @@ from pathlib import Path
 import sys
 import types
 
+sys.modules['config'] = types.SimpleNamespace(use_availability=False, ext_sensors=False, version="0")
+
 SRC_DIR = Path(__file__).parents[1] / "src"
 sys.path.insert(0, str(SRC_DIR))
-sys.modules['config'] = types.SimpleNamespace(use_availability=False, ext_sensors=False, version="0")
+
+import update
 
 # Insert mocks for optional third party libraries so tests run without them
 paho_module = types.ModuleType("paho")
@@ -28,8 +31,6 @@ sys.modules['requests'] = types.ModuleType("requests")
 spec = importlib.util.spec_from_file_location("monitor", str(SRC_DIR / "rpi-cpu2mqtt.py"))
 monitor = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(monitor)
-
-import update
 
 class TestFunctions(unittest.TestCase):
     def test_check_sys_clock_speed(self):
@@ -54,10 +55,10 @@ class TestFunctions(unittest.TestCase):
             self.assertEqual(version, 'v1.0')
             expected_calls = [
                 mock.call([
-                    '/usr/bin/git', '-C', '/tmp', 'fetch', '--tags'
+                    'git', '-C', '/tmp', 'fetch', '--tags'
                 ], check=True, stdout=mock.ANY, stderr=mock.ANY, text=True),
                 mock.call([
-                    '/usr/bin/git', '-C', '/tmp', 'tag', '--sort=-v:refname'
+                    'git', '-C', '/tmp', 'tag', '--sort=-v:refname'
                 ], check=True, stdout=mock.ANY, stderr=mock.ANY, text=True)
             ]
             m.assert_has_calls(expected_calls)
@@ -74,3 +75,4 @@ class TestFunctions(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
