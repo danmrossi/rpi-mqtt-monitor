@@ -13,8 +13,10 @@
 
 The easiest way to track your Raspberry Pi or Ubuntu computer system health and performance in Home Assistant.
 
+Python 3 is required to run this project.
+
 * Start Monitoring your System in just a few minutes
-* Monitor: CPU Load, CPU Temperature, Free Space, Used Memory, Swap Usage, Uptime, WiFi Signal Quality, Network IO, Voltage, RPi Power Health, RPi5 Fan Speed, APT Updates available on HOST, External Sensors, HDD/SSD Temperature and System Clock Speed
+* Monitor: CPU Load, CPU Temperature, Free Space, Used Memory, Swap Usage, Uptime, WFi Signal Quality, Network IO, Voltage, RPi Power Health, RPi5 Fan Speed, APT Updates available on HOST, External Sensors, HDD/SSD Temperature and System Clock Speed
 * Remotely Restart / Shutdown your system and control your monitors
 * Automatic HASS Configuration: Supports discovery messages, so no manual configuration in [Home Assistant](https://www.home-assistant.io/) configuration.yaml is needed
 * Automated Installation and Configuration: You can install it and schedule it with a service or cron job with just one command from shell
@@ -56,15 +58,16 @@ bash <(curl -s https://raw.githubusercontent.com/hjelev/rpi-mqtt-monitor/master/
 
 Raspberry Pi MQTT monitor will be installed in the location where the installer is called, inside a folder named rpi-mqtt-monitor.
 
-The auto-installer needs the software below and will install it if it’s not found:
+The auto-installer needs the following software below and will install it if its not found:
 
 * git
-* python (2 or 3)
-* python-pip
+* python3
+* python3-pip
+* python3-venv
 * paho-mqtt (python module)
 * requests (python module)
 
-Only python is not automatically installed, the rest of the dependencies should be handled by the auto installation.
+The auto-installer will attempt to install Python 3 and its required packages if they are missing.
 It will also help you configure the host and credentials for the mqtt server in config.py and create the service or cronjob configuration for you.
 It is recommended to run the script as a service, this way you can use the restart, shutdown and display control buttons in Home Assistant.
 
