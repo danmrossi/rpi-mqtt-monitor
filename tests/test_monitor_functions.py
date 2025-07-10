@@ -32,6 +32,13 @@ spec = importlib.util.spec_from_file_location("monitor", str(SRC_DIR / "rpi-cpu2
 monitor = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(monitor)
 
+# Load ds18b20 module for testing
+ds_spec = importlib.util.spec_from_file_location(
+    "ds18b20", str(Path(__file__).parents[1] / "ext_sensor_lib" / "ds18b20.py")
+)
+ds18b20 = importlib.util.module_from_spec(ds_spec)
+ds_spec.loader.exec_module(ds18b20)
+
 class TestFunctions(unittest.TestCase):
     def test_check_sys_clock_speed(self):
         mock_data = '1500000\n'
@@ -72,6 +79,31 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(monitor.sanitize_numeric(10), 10)
         self.assertEqual(monitor.sanitize_numeric(None), 0)
         self.assertEqual(monitor.sanitize_numeric(float('nan')), 0)
+
+    def test_check_wifi_signal(self):
+        mock_run = mock.Mock()
+        mock_run.stdout = 'wlan0 Quality=45/70 foo bar level=-60 dBm'
+        with mock.patch('glob.glob', return_value=['/sys/class/ieee80211/phy0/device/net/wlan0']), \
+             mock.patch('subprocess.run', return_value=mock_run):
+            self.assertEqual(monitor.check_wifi_signal(''), 64)
+            self.assertEqual(monitor.check_wifi_signal('dbm'), '-60')
+
+    def test_check_uptime_timestamp(self):
+        mock_date = mock.Mock(stdout='+0200\n')
+        mock_uptime = mock.Mock(stdout='2024-01-01 12:34:56\n')
+        with mock.patch('subprocess.run', side_effect=[mock_date, mock_uptime]):
+            ts = monitor.check_uptime('timestamp')
+            self.assertEqual(ts, '2024-01-01T12:34:56+0200')
+
+    def test_check_uptime_seconds(self):
+        mock_data = '12345.67 890.00\n'
+        with mock.patch.object(builtins, 'open', mock.mock_open(read_data=mock_data)):
+            self.assertEqual(monitor.check_uptime(''), 12345)
+
+    def test_sensor_DS18B20(self):
+        file_data = 'ignored\n00 00 00 00 00 00 00 00 00 t=21500\n'
+        with mock.patch.object(builtins, 'open', mock.mock_open(read_data=file_data)):
+            self.assertEqual(ds18b20.sensor_DS18B20('000000000000'), 21.5)
 
 if __name__ == '__main__':
     unittest.main()
