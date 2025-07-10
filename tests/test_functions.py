@@ -15,6 +15,7 @@ SRC_DIR = Path(__file__).parents[1] / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 import update
+import ext_sensor_lib.ds18b20 as ds18b20
 
 # Insert mocks for optional third party libraries so tests run without them
 paho_module = types.ModuleType("paho")
@@ -72,6 +73,18 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(monitor.sanitize_numeric(10), 10)
         self.assertEqual(monitor.sanitize_numeric(None), 0)
         self.assertEqual(monitor.sanitize_numeric(float('nan')), 0)
+
+    def test_sensor_ds18b20_success(self):
+        sensor_output = (
+            '76 01 4b 46 7f ff 0c 10 e6 : crc=e6 YES\n'
+            '76 01 4b 46 7f ff 0c 10 e6 t=23125\n'
+        )
+        with mock.patch.object(builtins, 'open', mock.mock_open(read_data=sensor_output)):
+            self.assertEqual(ds18b20.sensor_DS18B20('0000'), 23.1)
+
+    def test_sensor_ds18b20_missing_file(self):
+        with mock.patch.object(builtins, 'open', side_effect=IOError):
+            self.assertEqual(ds18b20.sensor_DS18B20('0000'), -300.0)
 
 if __name__ == '__main__':
     unittest.main()
